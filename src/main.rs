@@ -81,7 +81,35 @@ impl fmt::Display for Bank {
     }
 }
 
+type PlayerIndex = u8;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+enum State {
+    Setup(PlayerIndex),
+    Turn(PlayerIndex),
+    Finished(PlayerIndex), // The winner's index
+}
+
+#[derive(Debug)]
+struct Game {
+    state: State,
+    bank: Bank,
+    // systems
+}
+
+impl Game {
+    fn new() -> Game {
+        Game {
+            bank: Bank::full(),
+            state: State::Setup(0),
+        }
+    }
+}
+
 fn main() {
     let new_bank = Bank::full();
-    println!("{}", new_bank);
+    println!("full bank? {}", new_bank);
+
+    let new_game = Game::new();
+    println!("new game? {:?}", new_game);
 }
