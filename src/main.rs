@@ -113,13 +113,53 @@ enum InputError {
     PieceUnavailable,
 }
 
+#[derive(Debug)]
+struct System {
+    star: Piece,
+    other_star: Option<Piece>,
+    home_player: Option<PlayerIndex>,
+    ships: HashMap<PlayerIndex, Vec<Piece>>,
+}
+
+impl System {
+    pub fn new_homeworld(stars: [Piece; 2], player: PlayerIndex) -> System {
+        System {
+            star: stars[0],
+            other_star: Some(stars[1]),
+            home_player: Some(player),
+            ships: System::no_ships(),
+        }
+    }
+
+    pub fn new(star: Piece) -> System {
+        System {
+            star,
+            other_star: None,
+            home_player: None,
+            ships: System::no_ships(),
+        }
+    }
+
+    pub fn add_ship(&mut self, player: PlayerIndex, ship: Piece) {
+        self.ships.get_mut(&player).unwrap().push(ship);
+    }
+
+    fn no_ships() -> HashMap<PlayerIndex, Vec<Piece>> {
+        let mut initial_ships = HashMap::new();
+        for player_index in 0..NUM_PLAYERS {
+            initial_ships.insert(player_index, Vec::new());
+        }
+        initial_ships
+    }
+}
+
 const NUM_PLAYERS: u8 = 2;
 
 #[derive(Debug)]
 struct Game {
     state: State,
     bank: Bank,
-    // systems
+    systems: Vec<System>,
 }
 
 impl Game {
@@ -127,6 +167,7 @@ impl Game {
         Game {
             bank: Bank::full(),
             state: State::Setup(0),
+            systems: Vec::new(),
         }
     }
 
@@ -143,7 +184,11 @@ impl Game {
         self.bank.remove(setup_move.stars[0])?;
         self.bank.remove(setup_move.stars[1])?;
         self.bank.remove(setup_move.ship)?;
-        // TODO update systems
+
+        let mut homeworld = System::new_homeworld(setup_move.stars, setup_move.player);
+        homeworld.add_ship(setup_move.player, setup_move.ship);
+        self.systems.push(homeworld);
+
         let next_player = setup_move.player + 1;
         if next_player < NUM_PLAYERS {
             self.state = State::Setup(next_player);
