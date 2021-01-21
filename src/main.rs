@@ -96,6 +96,7 @@ impl fmt::Display for Bank {
 }
 
 type PlayerIndex = u8;
+type SystemIndex = u8;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 enum State {
@@ -104,6 +105,7 @@ enum State {
     Finished(PlayerIndex), // The winner's index
 }
 
+#[derive(Debug)]
 struct SetupMove {
     player: PlayerIndex,
     stars: [Piece; 2],
@@ -115,6 +117,48 @@ enum InputError {
     WrongState,
     WrongPlayer,
     PieceUnavailable,
+    WrongActionColor,
+    WrongSystem,
+    NoSuchShip,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+struct DeclareCatastrophe {
+    system: SystemIndex,
+    color: Color,
+}
+
+#[derive(Debug)]
+enum TurnInput {
+    Free(FreeMove),
+    Sacrifice(SacrificeMove),
+}
+
+#[derive(Debug)]
+struct FreeMove {
+    system: SystemIndex,
+    color: Color,
+    actions: Vec<Action>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+enum Action {
+    Catastrophe(DeclareCatastrophe),
+    RedAction(RedActionInput),
+    //TODO all the other colors
+}
+
+#[derive(Debug)]
+struct SacrificeMove {
+    //TODO
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+struct RedActionInput {
+    system: SystemIndex,
+    ship: Piece,
+    enemy_player: PlayerIndex,
+    ship_to_take: Piece,
 }
 
 #[derive(Debug)]
@@ -146,6 +190,16 @@ impl System {
 
     pub fn add_ship(&mut self, player: PlayerIndex, ship: Piece) {
         self.ships.get_mut(&player).unwrap().push(ship);
+    }
+
+    pub fn remove_ship(&mut self, player: PlayerIndex, ship: Piece) {
+        let player_ships = self.ships.get_mut(&player).unwrap();
+        let ship_position = player_ships.iter().position(|player_ship| *player_ship == ship).unwrap();
+        player_ships.remove(ship_position);
+    }
+
+    pub fn has_ship(&self, player: PlayerIndex, ship: Piece) -> bool {
+        self.ships.get(&player).unwrap().iter().any(|player_ship| ship == *player_ship)
     }
 
     pub fn is_adjacent(&self, other_system: &System) -> bool {
@@ -222,6 +276,66 @@ impl Game {
             self.state = State::Turn(0);
         }
         Ok(())
+    }
+
+    // TODO SetupMove packs the player into the input, pick one way and stick to it
+    pub fn turn(&mut self, player: PlayerIndex, turn: &TurnInput) -> Result<(), InputError> {
+        match self.state {
+            State::Turn(player) => {
+                match turn {
+                    TurnInput::Free(free_move) => self.free_move(player, free_move),
+                    TurnInput::Sacrifice(sacrifice_move) => self.sacrifice_move(player, sacrifice_move),
+                }
+            },
+            State::Turn(_) => Err(InputError::WrongPlayer),
+            _ => Err(InputError::WrongState),
+        }
+    }
+
+    fn free_move(&mut self, player: PlayerIndex, FreeMove { system, color, actions }: &FreeMove) -> Result<(), InputError> {
+        self.check_free_move_available(player, *system, *color)?;
+        for action in actions.iter() {
+            match action {
+                Action::RedAction(red_action_input) if *color == Color::RED => {
+                    Game::check_system(*system, red_action_input.system)?;
+                    return self.red_action(player, red_action_input);
+                },
+                Action::RedAction(_) => Err(InputError::WrongActionColor),
+                _ => Ok(()) // TODO
+            }?;
+        }
+        Ok(()) // TODO check the right amount of action happened
+    }
+
+    fn red_action(&mut self, player: PlayerIndex, RedActionInput { system, ship, enemy_player, ship_to_take }: &RedActionInput) -> Result<(), InputError> {
+        if player == *enemy_player {
+            return Err(InputError::WrongPlayer);
+        }
+        let system_data = self.systems.get_mut(*system as usize).unwrap();
+        if !system_data.has_ship(player, *ship) {
+            return Err(InputError::NoSuchShip);
+        }
+        if !system_data.has_ship(*enemy_player, *ship_to_take) {
+            return Err(InputError::NoSuchShip);
+        }
+        system_data.remove_ship(*enemy_player, *ship_to_take);
+        system_data.add_ship(player, *ship_to_take);
+        Ok(())
+    }
+
+    fn check_system(system: SystemIndex, input_system: SystemIndex) -> Result<(), InputError> {
+        if system != input_system {
+            return Err(InputError::WrongSystem);
+        }
+        Ok(())
+    }
+
+    fn check_free_move_available(&self, player: PlayerIndex, system: SystemIndex, color: Color) -> Result<(), InputError> {
+        Ok(()) // TODO
+    }
+
+    fn sacrifice_move(&mut self, player: PlayerIndex, sacrifice_move: &SacrificeMove) -> Result<(), InputError> {
+        Ok(()) // TODO
     }
 }
 
