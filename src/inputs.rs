@@ -8,41 +8,35 @@ pub struct SetupMove {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct DeclareCatastrophe {
-    pub system: SystemIndex,
-    pub color: Color,
-}
-
-#[derive(Debug)]
-pub enum TurnInput {
-    Free(FreeMove),
-    Sacrifice(SacrificeMove),
-}
-
-#[derive(Debug)]
-pub struct FreeMove {
-    pub system: SystemIndex,
-    pub color: Color,
-    pub actions: Vec<Action>,
+pub enum TurnPhase {
+    Started,
+    FreeMove(SystemIndex, Color),
+    Sacrifice(Color, u8), // number of remaining moves available
+    Done,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum Action {
-    Catastrophe(DeclareCatastrophe),
+pub struct Action {
+    pub system: SystemIndex,
+    pub ship: Piece,
+    pub color_action: ColorAction,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum ColorAction {
     RedAction(RedActionInput),
     //TODO all the other colors
 }
 
-#[derive(Debug)]
-pub struct SacrificeMove {
-    //TODO
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct RedActionInput {
+    pub enemy_player: PlayerIndex,
+    pub ship_to_take: Piece,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct RedActionInput {
+pub struct DeclareCatastrophe {
     pub system: SystemIndex,
-    pub ship: Piece,
-    pub enemy_player: PlayerIndex,
-    pub ship_to_take: Piece,
+    pub color: Color,
 }
 

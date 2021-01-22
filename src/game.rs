@@ -6,7 +6,7 @@ use crate::inputs::*;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 enum State {
     Setup(PlayerIndex),
-    Turn(PlayerIndex),
+    Turn(PlayerIndex, TurnPhase),
     Finished(PlayerIndex), // The winner's index
 }
 
@@ -48,46 +48,56 @@ impl Game {
         if next_player < NUM_PLAYERS {
             self.state = State::Setup(next_player);
         } else {
-            self.state = State::Turn(0);
+            self.state = State::Turn(0, TurnPhase::Started);
         }
         Ok(())
     }
 
-    // TODO SetupMove packs the player into the input, pick one way and stick to it
-    pub fn turn(&mut self, player: PlayerIndex, turn: &TurnInput) -> Result<(), InputError> {
+    pub fn free_move(&mut self, system: SystemIndex, color: Color) -> Result<(), InputError> {
         match self.state {
-            State::Turn(player) => {
-                match turn {
-                    TurnInput::Free(free_move) => self.free_move(player, free_move),
-                    TurnInput::Sacrifice(sacrifice_move) => self.sacrifice_move(player, sacrifice_move),
-                }
+            State::Turn(player, TurnPhase::Started) => {
+                self.check_free_move_available(player, system, color)?;
+                self.state = State::Turn(player, TurnPhase::FreeMove(system, color));
+                return Ok(());
             },
-            State::Turn(_) => Err(InputError::WrongPlayer),
+            State::Turn(_, _) => Err(InputError::WrongPhase),
             _ => Err(InputError::WrongState),
         }
     }
 
-    fn free_move(&mut self, player: PlayerIndex, FreeMove { system, color, actions }: &FreeMove) -> Result<(), InputError> {
-        self.check_free_move_available(player, *system, *color)?;
-        for action in actions.iter() {
-            match action {
-                Action::RedAction(red_action_input) if *color == Color::RED => {
-                    Game::check_system(*system, red_action_input.system)?;
-                    return self.red_action(player, red_action_input);
-                },
-                Action::RedAction(_) => Err(InputError::WrongActionColor),
-                _ => Ok(()) // TODO
-            }?;
+    pub fn action(&mut self, action: Action) -> Result<(), InputError> {
+        match self.state {
+            State::Turn(player, TurnPhase::FreeMove(system, color)) => {
+                Game::check_free_move(system, color, action)?;
+                self.action_unchecked(player, action)?;
+                self.state = State::Turn(player, TurnPhase::Done);
+                Ok(())
+            },
+            State::Turn(player, TurnPhase::Sacrifice(color, moves_left)) => {
+                Game::check_sacrifice(color, moves_left, action)?;
+                self.action_unchecked(player, action)?;
+                self.state = State::Turn(player, TurnPhase::Sacrifice(color, moves_left - 1));
+                Ok(())
+            },
+            State::Turn(_, _) => Err(InputError::WrongPhase),
+            _ => Err(InputError::WrongState),
         }
-        Ok(()) // TODO check the right amount of action happened
     }
 
-    fn red_action(&mut self, player: PlayerIndex, RedActionInput { system, ship, enemy_player, ship_to_take }: &RedActionInput) -> Result<(), InputError> {
+    fn action_unchecked(&mut self, player: PlayerIndex, action: Action) -> Result<(), InputError> {
+        match action.color_action {
+            ColorAction::RedAction(red_action_input) => self.red_action(player, action.system, action.ship, &red_action_input),
+            // TODO other colors
+            _ => Ok(())
+        }
+    }
+
+    fn red_action(&mut self, player: PlayerIndex, system: SystemIndex, ship: Piece, RedActionInput { enemy_player, ship_to_take }: &RedActionInput) -> Result<(), InputError> {
         if player == *enemy_player {
             return Err(InputError::WrongPlayer);
         }
-        let system_data = self.systems.get_mut(*system as usize).unwrap();
-        if !system_data.has_ship(player, *ship) {
+        let system_data = self.systems.get_mut(system as usize).unwrap();
+        if !system_data.has_ship(player, ship) {
             return Err(InputError::NoSuchShip);
         }
         if !system_data.has_ship(*enemy_player, *ship_to_take) {
@@ -96,13 +106,6 @@ impl Game {
         system_data.remove_ship(*enemy_player, *ship_to_take);
         system_data.add_ship(player, *ship_to_take);
         // TODO check for win ?
-        Ok(())
-    }
-
-    fn check_system(system: SystemIndex, input_system: SystemIndex) -> Result<(), InputError> {
-        if system != input_system {
-            return Err(InputError::WrongSystem);
-        }
         Ok(())
     }
 
@@ -128,7 +131,25 @@ impl Game {
         return Err(InputError::FreeActionUnavailable);
     }
 
-    fn sacrifice_move(&mut self, player: PlayerIndex, sacrifice_move: &SacrificeMove) -> Result<(), InputError> {
-        Ok(()) // TODO
+    fn check_free_move(system: SystemIndex, color: Color, action: Action) -> Result<(), InputError> {
+        if system != action.system {
+            return Err(InputError::WrongSystem);
+        }
+        Game::check_action_color(color, action.color_action)
+    }
+
+    fn check_sacrifice(color: Color, moves_left: u8, action: Action) -> Result<(), InputError> {
+        if moves_left <= 0 {
+            return Err(InputError::NoActionsLeft);
+        }
+        Game::check_action_color(color, action.color_action)
+    }
+
+    fn check_action_color(color: Color, color_action: ColorAction) -> Result<(), InputError> {
+        match color_action {
+            ColorAction::RedAction(_) if color != Color::RED => Err(InputError::WrongActionColor),
+            // TODO all other colors
+            _ => Ok(())
+        }
     }
 }

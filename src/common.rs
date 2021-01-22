@@ -56,6 +56,7 @@ pub const NUM_PLAYERS: u8 = 2;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum InputError {
     WrongState,
+    WrongPhase,
     WrongPlayer,
     PieceUnavailable,
     WrongActionColor,
@@ -63,4 +64,5 @@ pub enum InputError {
     NoSuchShip,
     BadSystem,
     FreeActionUnavailable,
+    NoActionsLeft,
 }
