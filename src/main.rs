@@ -120,6 +120,8 @@ enum InputError {
     WrongActionColor,
     WrongSystem,
     NoSuchShip,
+    BadSystem,
+    FreeActionUnavailable,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -188,6 +190,14 @@ impl System {
         }
     }
 
+    fn no_ships() -> HashMap<PlayerIndex, Vec<Piece>> {
+        let mut initial_ships = HashMap::new();
+        for player_index in 0..NUM_PLAYERS {
+            initial_ships.insert(player_index, Vec::new());
+        }
+        initial_ships
+    }
+
     pub fn add_ship(&mut self, player: PlayerIndex, ship: Piece) {
         self.ships.get_mut(&player).unwrap().push(ship);
     }
@@ -200,6 +210,10 @@ impl System {
 
     pub fn has_ship(&self, player: PlayerIndex, ship: Piece) -> bool {
         self.ships.get(&player).unwrap().iter().any(|player_ship| ship == *player_ship)
+    }
+
+    pub fn get_ships(&self, player: PlayerIndex) -> &Vec<Piece> {
+        self.ships.get(&player).unwrap()
     }
 
     pub fn is_adjacent(&self, other_system: &System) -> bool {
@@ -222,14 +236,6 @@ impl System {
             }
         }
         true
-    }
-
-    fn no_ships() -> HashMap<PlayerIndex, Vec<Piece>> {
-        let mut initial_ships = HashMap::new();
-        for player_index in 0..NUM_PLAYERS {
-            initial_ships.insert(player_index, Vec::new());
-        }
-        initial_ships
     }
 }
 
@@ -320,6 +326,7 @@ impl Game {
         }
         system_data.remove_ship(*enemy_player, *ship_to_take);
         system_data.add_ship(player, *ship_to_take);
+        // TODO check for win ?
         Ok(())
     }
 
@@ -331,7 +338,25 @@ impl Game {
     }
 
     fn check_free_move_available(&self, player: PlayerIndex, system: SystemIndex, color: Color) -> Result<(), InputError> {
-        Ok(()) // TODO
+        let system = self.systems.get(system as usize);
+        if let None = system {
+            return Err(InputError::BadSystem);
+        }
+        let system = system.unwrap();
+        let available_ships = system.get_ships(player);
+        if available_ships.is_empty() {
+            return Err(InputError::FreeActionUnavailable);
+        }
+        if system.star.color == color {
+            return Ok(());
+        }
+        if system.second_star.map_or(false, |star| star.color == color) {
+            return Ok(());
+        }
+        if available_ships.iter().any(|ship| ship.color == color) {
+            return Ok(());
+        }
+        return Err(InputError::FreeActionUnavailable);
     }
 
     fn sacrifice_move(&mut self, player: PlayerIndex, sacrifice_move: &SacrificeMove) -> Result<(), InputError> {
