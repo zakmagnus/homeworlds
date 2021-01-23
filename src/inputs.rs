@@ -25,6 +25,7 @@ pub struct Action {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum ColorAction {
     RedAction(RedActionInput),
+    BlueAction(Color),
     //TODO all the other colors
 }
 

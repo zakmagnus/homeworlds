@@ -40,10 +40,15 @@ impl System {
         self.ships.get_mut(&player).unwrap().push(ship);
     }
 
-    pub fn remove_ship(&mut self, player: PlayerIndex, ship: Piece) {
+    pub fn remove_ship(&mut self, player: PlayerIndex, ship: Piece) -> Result<(), InputError> {
         let player_ships = self.ships.get_mut(&player).unwrap();
-        let ship_position = player_ships.iter().position(|player_ship| *player_ship == ship).unwrap();
-        player_ships.remove(ship_position);
+        let ship_position = player_ships.iter().position(|player_ship| *player_ship == ship);
+        if let Some(ship_position) = ship_position {
+            player_ships.remove(ship_position);
+            Ok(())
+        } else {
+            Err(InputError::NoSuchShip)
+        }
     }
 
     pub fn has_ship(&self, player: PlayerIndex, ship: Piece) -> bool {

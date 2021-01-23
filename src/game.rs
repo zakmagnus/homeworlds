@@ -87,8 +87,7 @@ impl Game {
     fn action_unchecked(&mut self, player: PlayerIndex, action: Action) -> Result<(), InputError> {
         match action.color_action {
             ColorAction::RedAction(red_action_input) => self.red_action(player, action.system, action.ship, &red_action_input),
-            // TODO other colors
-            _ => Ok(())
+            ColorAction::BlueAction(new_color) => self.blue_action(player, action.system, action.ship, new_color),
         }
     }
 
@@ -96,16 +95,25 @@ impl Game {
         if player == *enemy_player {
             return Err(InputError::WrongPlayer);
         }
-        let system_data = self.systems.get_mut(system as usize).unwrap();
-        if !system_data.has_ship(player, ship) {
+        let system = self.systems.get_mut(system as usize).unwrap();
+        if !system.has_ship(player, ship) {
             return Err(InputError::NoSuchShip);
         }
-        if !system_data.has_ship(*enemy_player, *ship_to_take) {
-            return Err(InputError::NoSuchShip);
-        }
-        system_data.remove_ship(*enemy_player, *ship_to_take);
-        system_data.add_ship(player, *ship_to_take);
+        system.remove_ship(*enemy_player, *ship_to_take)?;
+        system.add_ship(player, *ship_to_take);
         // TODO check for win ?
+        Ok(())
+    }
+
+    fn blue_action(&mut self, player: PlayerIndex, system: SystemIndex, ship: Piece, new_color: Color)
+        -> Result<(), InputError> {
+        if ship.color == new_color {
+            return Err(InputError::WrongColor);
+        }
+        let system = self.systems.get_mut(system as usize).unwrap();
+        system.remove_ship(player, ship)?;
+        let new_ship = Piece { color: new_color, size: ship.size };
+        system.add_ship(player, new_ship);
         Ok(())
     }
 
@@ -148,7 +156,8 @@ impl Game {
     fn check_action_color(color: Color, color_action: ColorAction) -> Result<(), InputError> {
         match color_action {
             ColorAction::RedAction(_) if color != Color::RED => Err(InputError::WrongActionColor),
-            // TODO all other colors
+            ColorAction::BlueAction(_) if color != Color::BLUE => Err(InputError::WrongActionColor),
+            // TODO all the other colors
             _ => Ok(())
         }
     }

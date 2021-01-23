@@ -65,4 +65,5 @@ pub enum InputError {
     BadSystem,
     FreeActionUnavailable,
     NoActionsLeft,
+    WrongColor,
 }
