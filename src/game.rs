@@ -111,6 +111,9 @@ impl Game {
         if player == *enemy_player {
             return Err(InputError::WrongPlayer);
         }
+        if ship_to_take.size > ship.size {
+            return Err(InputError::ShipTooBig);
+        }
         let system = self.systems.get_mut(system as usize).unwrap();
         system.remove_ship(*enemy_player, *ship_to_take)?;
         system.add_ship(player, *ship_to_take);

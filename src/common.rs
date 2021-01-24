@@ -1,4 +1,5 @@
 use std::fmt;
+use std::cmp::Ordering;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Color {
@@ -22,7 +23,7 @@ impl fmt::Display for Color {
 
 pub const ALL_COLORS: [Color; 4] = [Color::RED, Color::BLUE, Color::GREEN, Color::YELLOW];
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Ord)]
 pub enum Size {
     SMALL,
     MEDIUM,
@@ -37,6 +38,22 @@ impl fmt::Display for Size {
             Size::LARGE => "Large",
         };
         write!(f, "{}", name)
+    }
+}
+
+impl Size {
+    pub fn to_u8(&self) -> u8 {
+        match self {
+            Size::SMALL => 1,
+            Size::MEDIUM => 2,
+            Size::LARGE => 3,
+        }
+    }
+}
+
+impl PartialOrd<Size> for Size {
+    fn partial_cmp(&self, other: &Size) -> Option<Ordering> {
+        Some(self.to_u8().cmp(&other.to_u8()))
     }
 }
 
@@ -66,4 +83,5 @@ pub enum InputError {
     FreeActionUnavailable,
     NoActionsLeft,
     WrongColor,
+    ShipTooBig,
 }
