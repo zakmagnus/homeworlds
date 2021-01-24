@@ -88,6 +88,8 @@ impl Game {
         match action.color_action {
             ColorAction::RedAction(red_action_input) => self.red_action(player, action.system, action.ship, &red_action_input),
             ColorAction::BlueAction(new_color) => self.blue_action(player, action.system, action.ship, new_color),
+            ColorAction::GreenAction => self.green_action(player, action.system, action.ship),
+            ColorAction::YellowAction(_) => Ok(()) // TODO
         }
     }
 
@@ -115,6 +117,25 @@ impl Game {
         let new_ship = Piece { color: new_color, size: ship.size };
         system.add_ship(player, new_ship);
         Ok(())
+    }
+
+    fn green_action(&mut self, player: PlayerIndex, system: SystemIndex, ship: Piece) -> Result<(), InputError> {
+        let system = self.systems.get_mut(system as usize).unwrap();
+        if !system.has_ship(player, ship) {
+            return Err(InputError::NoSuchShip);
+        }
+        let possible_new_ships = [
+            Piece { color: ship.color, size: Size::SMALL },
+            Piece { color: ship.color, size: Size::MEDIUM },
+            Piece { color: ship.color, size: Size::LARGE }];
+        for new_ship in possible_new_ships.iter() {
+            if self.bank.num_available(*new_ship) > 0 {
+                self.bank.remove(*new_ship);
+                system.add_ship(player, *new_ship);
+                Ok(())
+            }
+        }
+        Err(InputError::PieceUnavailable)
     }
 
     fn check_free_move_available(&self, player: PlayerIndex, system: SystemIndex, color: Color) -> Result<(), InputError> {
@@ -157,7 +178,8 @@ impl Game {
         match color_action {
             ColorAction::RedAction(_) if color != Color::RED => Err(InputError::WrongActionColor),
             ColorAction::BlueAction(_) if color != Color::BLUE => Err(InputError::WrongActionColor),
-            // TODO all the other colors
+            ColorAction::GreenAction if color != Color::GREEN => Err(InputError::WrongActionColor),
+            ColorAction::YellowAction(_) if color != Color::YELLOW => Err(InputError::WrongActionColor),
             _ => Ok(())
         }
     }

@@ -26,13 +26,19 @@ pub struct Action {
 pub enum ColorAction {
     RedAction(RedActionInput),
     BlueAction(Color),
-    //TODO all the other colors
+    GreenAction,
+    YellowAction(YellowActionStruct),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct RedActionInput {
     pub enemy_player: PlayerIndex,
     pub ship_to_take: Piece,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct YellowActionInput {
+    // TODO
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
