@@ -27,7 +27,7 @@ pub enum ColorAction {
     RedAction(RedActionInput),
     BlueAction(Color),
     GreenAction,
-    YellowAction(YellowActionStruct),
+    YellowAction(YellowActionInput),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]

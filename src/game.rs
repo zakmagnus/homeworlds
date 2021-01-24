@@ -27,9 +27,8 @@ impl Game {
     }
 
     pub fn setup(&mut self, setup_move: &SetupMove) -> Result<(), InputError> {
-        let player = setup_move.player;
         match self.state {
-            State::Setup(player) => self.setup_unchecked(setup_move),
+            State::Setup(player) if player == setup_move.player => self.setup_unchecked(setup_move),
             State::Setup(_) => Err(InputError::WrongPlayer),
             _ => Err(InputError::WrongState),
         }
@@ -69,18 +68,33 @@ impl Game {
         match self.state {
             State::Turn(player, TurnPhase::FreeMove(system, color)) => {
                 Game::check_free_move(system, color, action)?;
+                self.check_action(player, action)?;
                 self.action_unchecked(player, action)?;
                 self.state = State::Turn(player, TurnPhase::Done);
                 Ok(())
             },
             State::Turn(player, TurnPhase::Sacrifice(color, moves_left)) => {
                 Game::check_sacrifice(color, moves_left, action)?;
+                self.check_action(player, action)?;
                 self.action_unchecked(player, action)?;
                 self.state = State::Turn(player, TurnPhase::Sacrifice(color, moves_left - 1));
                 Ok(())
             },
             State::Turn(_, _) => Err(InputError::WrongPhase),
             _ => Err(InputError::WrongState),
+        }
+    }
+
+    fn check_action(&self, player: PlayerIndex, action: Action) -> Result<(), InputError> {
+        let system = self.systems.get(action.system as usize);
+        match system {
+            None => Err(InputError::BadSystem),
+            Some(system) => {
+                if !system.has_ship(player, action.ship) {
+                    return Err(InputError::NoSuchShip);
+                }
+                Ok(())
+            }
         }
     }
 
@@ -98,9 +112,6 @@ impl Game {
             return Err(InputError::WrongPlayer);
         }
         let system = self.systems.get_mut(system as usize).unwrap();
-        if !system.has_ship(player, ship) {
-            return Err(InputError::NoSuchShip);
-        }
         system.remove_ship(*enemy_player, *ship_to_take)?;
         system.add_ship(player, *ship_to_take);
         // TODO check for win ?
@@ -121,9 +132,6 @@ impl Game {
 
     fn green_action(&mut self, player: PlayerIndex, system: SystemIndex, ship: Piece) -> Result<(), InputError> {
         let system = self.systems.get_mut(system as usize).unwrap();
-        if !system.has_ship(player, ship) {
-            return Err(InputError::NoSuchShip);
-        }
         let possible_new_ships = [
             Piece { color: ship.color, size: Size::SMALL },
             Piece { color: ship.color, size: Size::MEDIUM },
@@ -132,7 +140,7 @@ impl Game {
             if self.bank.num_available(*new_ship) > 0 {
                 self.bank.remove(*new_ship);
                 system.add_ship(player, *new_ship);
-                Ok(())
+                return Ok(());
             }
         }
         Err(InputError::PieceUnavailable)
