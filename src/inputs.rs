@@ -37,8 +37,9 @@ pub struct RedActionInput {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct YellowActionInput {
-    // TODO
+pub enum YellowActionInput {
+    Existing(SystemIndex),
+    Discover(Piece),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]

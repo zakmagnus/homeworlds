@@ -29,6 +29,14 @@ impl Bank {
         *self.available_amounts.get_mut(&piece).unwrap() -= 1;
         Ok(())
     }
+
+    pub fn add(&mut self, piece: Piece) -> Result<(), InputError> {
+        if self.num_available(piece) >= 3 {
+            return Err(InputError::BadPiece);
+        }
+        *self.available_amounts.get_mut(&piece).unwrap() += 1;
+        Ok(())
+    }
 }
 
 impl fmt::Display for Bank {

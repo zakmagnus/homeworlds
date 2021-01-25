@@ -84,4 +84,6 @@ pub enum InputError {
     NoActionsLeft,
     WrongColor,
     ShipTooBig,
+    SystemsNotAdjacent,
+    BadPiece,
 }

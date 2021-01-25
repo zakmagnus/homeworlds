@@ -4,10 +4,7 @@ mod system;
 mod inputs;
 mod game;
 
-use std::fmt;
-use std::collections::HashMap;
 use common::*;
-use bank::*;
 use system::*;
 use inputs::*;
 use game::*;

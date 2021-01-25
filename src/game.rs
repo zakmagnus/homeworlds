@@ -64,6 +64,7 @@ impl Game {
         }
     }
 
+    // TODO this should be able to return something, at least for yellow discoveries
     pub fn action(&mut self, action: Action) -> Result<(), InputError> {
         match self.state {
             State::Turn(player, TurnPhase::FreeMove(system, color)) => {
@@ -103,7 +104,7 @@ impl Game {
             ColorAction::RedAction(red_action_input) => self.red_action(player, action.system, action.ship, &red_action_input),
             ColorAction::BlueAction(new_color) => self.blue_action(player, action.system, action.ship, new_color),
             ColorAction::GreenAction => self.green_action(player, action.system, action.ship),
-            ColorAction::YellowAction(_) => Ok(()) // TODO
+            ColorAction::YellowAction(yellow_action_input) => self.yellow_action(player, action.system, action.ship, &yellow_action_input),
         }
     }
 
@@ -149,6 +150,51 @@ impl Game {
         Err(InputError::PieceUnavailable)
     }
 
+    fn yellow_action(&mut self, player: PlayerIndex, system: SystemIndex, ship: Piece, yellow_action_input: &YellowActionInput)
+        -> Result<(), InputError> {
+        // TODO this should not return an error after mutating data
+        let target_system = self.get_yellow_target(system, yellow_action_input)?;
+        target_system.add_ship(player, ship);
+        let system_data = self.systems.get_mut(system as usize).unwrap();
+        system_data.remove_ship(player, ship)?;
+        if system_data.is_empty() {
+            // The system evaporates
+            for &star in system_data.stars().iter() {
+                self.bank.add(star);
+            }
+            self.systems.remove(system as usize);
+        }
+        // TODO check for win
+        Ok(())
+    }
+
+    fn get_yellow_target(&mut self, system: SystemIndex, yellow_action_input: &YellowActionInput)
+        -> Result<&mut System, InputError> {
+        let system = self.systems.get(system as usize).unwrap();
+        match yellow_action_input {
+            YellowActionInput::Existing(existing_system_index) => {
+                let existing_system = self.systems.get(*existing_system_index as usize);
+                match existing_system {
+                    None => Err(InputError::BadSystem),
+                    Some(existing_system) => {
+                        if !system.is_adjacent(existing_system) {
+                            return Err(InputError::SystemsNotAdjacent);
+                        }
+                        Ok(self.systems.get_mut(*existing_system_index as usize).unwrap())
+                    }
+                }
+            },
+            YellowActionInput::Discover(new_star) => {
+                let new_system = System::new(*new_star);
+                if !system.is_adjacent(&new_system) {
+                    return Err(InputError::SystemsNotAdjacent);
+                }
+                self.systems.push(new_system);
+                Ok(self.systems.last_mut().unwrap())
+            },
+        }
+    }
+
     fn check_free_move_available(&self, player: PlayerIndex, system: SystemIndex, color: Color) -> Result<(), InputError> {
         let system = self.systems.get(system as usize);
         if let None = system {
@@ -159,11 +205,10 @@ impl Game {
         if available_ships.is_empty() {
             return Err(InputError::FreeActionUnavailable);
         }
-        if system.star.color == color {
-            return Ok(());
-        }
-        if system.second_star.map_or(false, |star| star.color == color) {
-            return Ok(());
+        for star in system.stars().iter() {
+            if star.color == color {
+                return Ok(());
+            }
         }
         if available_ships.iter().any(|ship| ship.color == color) {
             return Ok(());

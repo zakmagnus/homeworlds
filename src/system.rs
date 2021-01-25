@@ -3,8 +3,8 @@ use crate::common::*;
 
 #[derive(Debug)]
 pub struct System {
-    pub star: Piece,
-    pub second_star: Option<Piece>,
+    star: Piece,
+    second_star: Option<Piece>,
     pub home_player: Option<PlayerIndex>,
     ships: HashMap<PlayerIndex, Vec<Piece>>,
 }
@@ -36,6 +36,17 @@ impl System {
         initial_ships
     }
 
+    pub fn stars(&self) -> Vec<Piece> {
+        match self.second_star {
+            None => vec![self.star],
+            Some(second_star) => vec![self.star, second_star],
+        }
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.ships.is_empty()
+    }
+
     pub fn add_ship(&mut self, player: PlayerIndex, ship: Piece) {
         self.ships.get_mut(&player).unwrap().push(ship);
     }
@@ -60,20 +71,11 @@ impl System {
     }
 
     pub fn is_adjacent(&self, other_system: &System) -> bool {
-        if self.star.size == other_system.star.size {
-            return false;
-        }
-        if let Some(second_star) = self.second_star {
-            if second_star.size == other_system.star.size {
-                return false;
-            }
-        }
-        if let Some(other_second_star) = other_system.second_star {
-            if self.star.size == other_second_star.size {
-                return false;
-            }
-            if let Some(second_star) = self.second_star {
-                if second_star.size == other_second_star.size {
+        let stars = self.stars();
+        let other_stars = other_system.stars();
+        for star in stars.iter() {
+            for other_star in other_stars.iter() {
+                if star.size == other_star.size {
                     return false;
                 }
             }
