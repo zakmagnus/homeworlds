@@ -118,7 +118,7 @@ impl Game {
         let system = self.systems.get_mut(system as usize).unwrap();
         system.remove_ship(*enemy_player, *ship_to_take)?;
         system.add_ship(player, *ship_to_take);
-        // TODO check for win ?
+        self.end_game_if_necessary();
         Ok(())
     }
 
@@ -164,7 +164,7 @@ impl Game {
             }
             self.systems.remove(system as usize);
         }
-        // TODO check for win
+        self.end_game_if_necessary();
         Ok(())
     }
 
@@ -237,6 +237,39 @@ impl Game {
             ColorAction::GreenAction if color != Color::GREEN => Err(InputError::WrongActionColor),
             ColorAction::YellowAction(_) if color != Color::YELLOW => Err(InputError::WrongActionColor),
             _ => Ok(())
+        }
+    }
+
+    fn end_game_if_necessary(&mut self) -> bool {
+        let winner = self.get_winner();
+        if let Some(winner) = winner {
+            self.state = State::Finished(winner);
+            true
+        } else {
+            false
+        }
+    }
+
+    fn get_winner(&self) -> Option<PlayerIndex> {
+        let non_losers: Vec<PlayerIndex> = (0..NUM_PLAYERS).into_iter().filter(|&player| !self.is_loser(player)).collect();
+        return if non_losers.len() == 1 {
+            Some(*non_losers.get(0).unwrap())
+        } else {
+            None
+        }
+    }
+
+    fn is_loser(&self, player: PlayerIndex) -> bool {
+        let system_loss_status = self.systems.iter()
+            .filter(|system| match system.home_player {
+                None => false,
+                Some(home_player) => home_player == player,
+            })
+            .map(|home_system| home_system.get_ships(home_system.home_player.unwrap()).is_empty())
+            .next();
+        match system_loss_status {
+            None => false, // No home system, no ships at home system. Lose.
+            Some(is_loser) => is_loser,
         }
     }
 }
