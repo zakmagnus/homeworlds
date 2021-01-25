@@ -64,6 +64,25 @@ impl Game {
         }
     }
 
+    pub fn sacrifice(&mut self, system: SystemIndex, ship: Piece) -> Result<(), InputError> {
+        match self.state {
+            State::Turn(player, TurnPhase::Started) => {
+                let system = self.systems.get_mut(system as usize);
+                match system {
+                    None => Err(InputError::BadSystem),
+                    Some(system) => {
+                        system.remove_ship(player, ship)?;
+                        self.state = State::Turn(player, TurnPhase::Sacrifice(ship.color, ship.size.to_u8()));
+                        self.end_game_if_necessary();
+                        Ok(())
+                    }
+                }
+            },
+            State::Turn(_, _) => Err(InputError::WrongPhase),
+            _ => Err(InputError::WrongState),
+        }
+    }
+
     // TODO this should be able to return something, at least for yellow discoveries
     pub fn action(&mut self, action: Action) -> Result<(), InputError> {
         match self.state {
@@ -72,13 +91,20 @@ impl Game {
                 self.check_action(player, action)?;
                 self.action_unchecked(player, action)?;
                 self.state = State::Turn(player, TurnPhase::Done);
+                self.end_game_if_necessary();
                 Ok(())
             },
             State::Turn(player, TurnPhase::Sacrifice(color, moves_left)) => {
                 Game::check_sacrifice(color, moves_left, action)?;
                 self.check_action(player, action)?;
                 self.action_unchecked(player, action)?;
-                self.state = State::Turn(player, TurnPhase::Sacrifice(color, moves_left - 1));
+                let moves_left = moves_left - 1;
+                self.state = if moves_left > 0 {
+                    State::Turn(player, TurnPhase::Sacrifice(color, moves_left))
+                } else {
+                    State::Finished(player)
+                };
+                self.end_game_if_necessary();
                 Ok(())
             },
             State::Turn(_, _) => Err(InputError::WrongPhase),
@@ -118,7 +144,6 @@ impl Game {
         let system = self.systems.get_mut(system as usize).unwrap();
         system.remove_ship(*enemy_player, *ship_to_take)?;
         system.add_ship(player, *ship_to_take);
-        self.end_game_if_necessary();
         Ok(())
     }
 
@@ -164,7 +189,6 @@ impl Game {
             }
             self.systems.remove(system as usize);
         }
-        self.end_game_if_necessary();
         Ok(())
     }
 
