@@ -28,10 +28,16 @@ fn main() {
     game.action(Action { system: 0, ship: Piece { color: Color::GREEN, size: Size::LARGE },
         color_action: GreenAction { }}).unwrap();
     println!("{}", game);
+    game.end_turn().unwrap();
+    println!("{}", game);
 
     game.free_move(1, Color::GREEN).unwrap();
     println!("{}", game);
     game.action(Action { system: 1, ship: Piece { color: Color::YELLOW, size: Size::LARGE },
         color_action: GreenAction { }}).unwrap();
     println!("{}", game);
+    game.end_turn().unwrap();
+    println!("{}", game);
+
+
 }

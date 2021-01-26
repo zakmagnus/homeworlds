@@ -136,6 +136,18 @@ impl Game {
         }
     }
 
+    pub fn end_turn(&mut self) -> Result<(), InputError> {
+        match self.state {
+            State::Turn(player, TurnPhase::Done) => {
+                let next_player = (player + 1) % NUM_PLAYERS;
+                self.state = State::Turn(next_player, TurnPhase::Started);
+                Ok(())
+            },
+            State::Turn(_, _) => Err(InputError::WrongPhase),
+            _ => Err(InputError::WrongState),
+        }
+    }
+
     fn check_action(&self, player: PlayerIndex, action: Action) -> Result<(), InputError> {
         let system = self.systems.get(action.system as usize);
         match system {
