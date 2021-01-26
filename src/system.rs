@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use crate::common::*;
+use crate::bank::*;
 
 #[derive(Debug)]
 pub struct System {
@@ -82,4 +83,72 @@ impl System {
         }
         true
     }
+
+    pub fn color_count(&self, color: Color) -> i32 {
+        let mut count = 0;
+        for star in self.stars() {
+            if star.color == color {
+                count += 1;
+            }
+        }
+        for ships in self.ships.values().into_iter() {
+            for ship in ships {
+                if ship.color == color {
+                    count += 1;
+                }
+            }
+        }
+        count
+    }
+
+    pub fn catastrophe(&mut self, color: Color, bank: &mut Bank) -> CatastropheResult {
+        let no_ships_left = self.ships.values_mut().into_iter().all(|ships| {
+            ships.retain(|&ship| {
+                if ship.color != color {
+                    return true;
+                }
+                bank.add(ship);
+                return false;
+            });
+            ships.is_empty()
+        });
+        let mut no_stars_left = false;
+        if !no_ships_left {
+            let stars = self.stars();
+            let stars_to_kill: Vec<Piece> = stars.iter()
+                .filter(|&star| star.color == color)
+                .map(|star| *star).collect();
+            if stars_to_kill.len() >= stars.len() {
+                // Everything in the system will get banked later because of this.
+                no_stars_left = true;
+            } else if !stars_to_kill.is_empty() {
+                // One star dies and the other remains
+                let &star_to_kill = stars_to_kill.get(0).unwrap();
+                let only_star_left = stars.iter().filter(|&&star| star != star_to_kill).next().unwrap();
+                bank.add(star_to_kill);
+                self.star = *only_star_left;
+                self.second_star = None;
+            }
+        }
+        if no_ships_left || no_stars_left {
+            // Evaporate: bank everything.
+            for ships in self.ships.values() {
+                for &ship in ships {
+                    bank.add(ship);
+                }
+            }
+            for star in self.stars() {
+                bank.add(star);
+            }
+            CatastropheResult::SystemEvaporated
+        } else {
+            CatastropheResult::SystemStillExists
+        }
+    }
+}
+
+pub enum CatastropheResult {
+    SystemStillExists,
+    // The system should not be used after it's evaporated.
+    SystemEvaporated,
 }

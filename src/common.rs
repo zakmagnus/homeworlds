@@ -70,6 +70,8 @@ pub type SystemIndex = u8;
 
 pub const NUM_PLAYERS: u8 = 2;
 
+pub const CATASTROPHE_COUNT: i32 = 4;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum InputError {
     WrongState,
@@ -86,4 +88,5 @@ pub enum InputError {
     ShipTooBig,
     SystemsNotAdjacent,
     BadPiece,
+    NotCatastrophicEnough,
 }

@@ -67,11 +67,12 @@ impl Game {
     pub fn sacrifice(&mut self, system: SystemIndex, ship: Piece) -> Result<(), InputError> {
         match self.state {
             State::Turn(player, TurnPhase::Started) => {
-                let system = self.systems.get_mut(system as usize);
-                match system {
+                let system_data = self.systems.get_mut(system as usize);
+                match system_data {
                     None => Err(InputError::BadSystem),
-                    Some(system) => {
-                        system.remove_ship(player, ship)?;
+                    Some(system_data) => {
+                        system_data.remove_ship(player, ship)?;
+                        self.evaporate_system_if_necessary(system);
                         self.state = State::Turn(player, TurnPhase::Sacrifice(ship.color, ship.size.to_u8()));
                         self.end_game_if_necessary();
                         Ok(())
@@ -80,6 +81,28 @@ impl Game {
             },
             State::Turn(_, _) => Err(InputError::WrongPhase),
             _ => Err(InputError::WrongState),
+        }
+    }
+
+    pub fn catastrophe(&mut self, system: SystemIndex, color: Color) -> Result<(), InputError> {
+        if let State::Setup(_) | State::Finished(_) = self.state {
+            return Err(InputError::WrongState);
+        }
+        let system_data = self.systems.get_mut(system as usize);
+        match system_data {
+            None => Err(InputError::BadSystem),
+            Some(system_data) => {
+                let color_count = system_data.color_count(color);
+                if color_count < CATASTROPHE_COUNT {
+                    return Err(InputError::NotCatastrophicEnough);
+                }
+                let result = system_data.catastrophe(color, &mut self.bank);
+                if let CatastropheResult::SystemEvaporated = result {
+                    self.systems.remove(system as usize);
+                }
+                self.end_game_if_necessary();
+                Ok(())
+            }
         }
     }
 
@@ -182,14 +205,18 @@ impl Game {
         target_system.add_ship(player, ship);
         let system_data = self.systems.get_mut(system as usize).unwrap();
         system_data.remove_ship(player, ship)?;
+        self.evaporate_system_if_necessary(system);
+        Ok(())
+    }
+
+    fn evaporate_system_if_necessary(&mut self, system: SystemIndex) {
+        let system_data = self.systems.get_mut(system as usize).unwrap();
         if system_data.is_empty() {
-            // The system evaporates
             for &star in system_data.stars().iter() {
                 self.bank.add(star);
             }
             self.systems.remove(system as usize);
         }
-        Ok(())
     }
 
     fn get_yellow_target(&mut self, system: SystemIndex, yellow_action_input: &YellowActionInput)

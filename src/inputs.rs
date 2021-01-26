@@ -42,9 +42,3 @@ pub enum YellowActionInput {
     Discover(Piece),
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct DeclareCatastrophe {
-    pub system: SystemIndex,
-    pub color: Color,
-}
-
