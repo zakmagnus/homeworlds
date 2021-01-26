@@ -126,7 +126,7 @@ impl Game {
                 self.state = if moves_left > 0 {
                     State::Turn(player, TurnPhase::Sacrifice(color, moves_left))
                 } else {
-                    State::Finished(player)
+                    State::Turn(player, TurnPhase::Done)
                 };
                 self.end_game_if_necessary();
                 Ok(())

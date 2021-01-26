@@ -103,7 +103,7 @@ impl System {
     }
 
     pub fn catastrophe(&mut self, color: Color, bank: &mut Bank) -> CatastropheResult {
-        let no_ships_left = self.ships.values_mut().into_iter().all(|ships| {
+        let player_has_no_ships: Vec<bool> = self.ships.values_mut().into_iter().map(|ships| {
             ships.retain(|&ship| {
                 if ship.color != color {
                     return true;
@@ -112,7 +112,8 @@ impl System {
                 return false;
             });
             ships.is_empty()
-        });
+        }).collect();
+        let no_ships_left = player_has_no_ships.iter().all(|&empty| empty);
         let mut no_stars_left = false;
         if !no_ships_left {
             let stars = self.stars();
