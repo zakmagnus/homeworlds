@@ -1,3 +1,4 @@
+use std::fmt;
 use std::collections::HashMap;
 use crate::common::*;
 use crate::bank::*;
@@ -151,4 +152,32 @@ pub enum CatastropheResult {
     SystemStillExists,
     // The system should not be used after it's evaporated.
     SystemEvaporated,
+}
+
+impl fmt::Display for System {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        if let Some(home_player) = self.home_player {
+            write!(f, "Player {}'s homeworld, ", home_player)?;
+        }
+        if let Some(second_star) = self.second_star {
+            write!(f, "binary stars {}/{}; ", self.star, second_star)?;
+        } else {
+            write!(f, "{} star; ", self.star)?;
+        }
+        for (player, ships) in self.ships.iter() {
+            if ships.is_empty() {
+                continue;
+            }
+            write!(f, "Player {}'s ship(s): ", player)?;
+            for (index, ship) in ships.iter().enumerate() {
+                write!(f, "{}", ship)?;
+                if index >= ships.len() - 1 {
+                    write!(f, "; ")?;
+                } else {
+                    write!(f, ", ")?;
+                }
+            }
+        }
+        Ok(())
+    }
 }

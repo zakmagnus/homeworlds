@@ -65,6 +65,12 @@ pub struct Piece {
     pub size: Size,
 }
 
+impl fmt::Display for Piece {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{} {}", self.size, self.color)
+    }
+}
+
 pub type PlayerIndex = u8;
 pub type SystemIndex = u8;
 

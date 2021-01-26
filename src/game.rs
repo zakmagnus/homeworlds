@@ -1,3 +1,4 @@
+use std::fmt;
 use crate::common::*;
 use crate::bank::*;
 use crate::system::*;
@@ -322,5 +323,35 @@ impl Game {
             None => false, // No home system, no ships at home system. Lose.
             Some(is_loser) => is_loser,
         }
+    }
+}
+
+impl fmt::Display for State {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            State::Setup(player) => write!(f, "Player {}'s setup", player),
+            State::Finished(winner) => write!(f, "Game over, player {} wins", winner),
+            State::Turn(player, turn_phase) => {
+                write!(f, "Player {}'s turn, ", player)?;
+                match turn_phase {
+                    TurnPhase::Started => write!(f, "no move selected"),
+                    TurnPhase::Done => write!(f, "no moves left"),
+                    TurnPhase::FreeMove(system, color) =>
+                        write!(f, "free {} move in system {}", color, system),
+                    TurnPhase::Sacrifice(color, moves_left) =>
+                        write!(f, "{} sacrifice, {} move(s) left", color, moves_left),
+                }
+            },
+        }
+    }
+}
+
+impl fmt::Display for Game {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}\nSystems:\n", self.state)?;
+        for system in self.systems.iter() {
+            write!(f, " - {}\n", system)?;
+        }
+        Ok(())
     }
 }
