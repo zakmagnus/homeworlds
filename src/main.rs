@@ -18,19 +18,23 @@ fn main() {
 
     let mut input = String::new();
     let mut last_input_failed = false;
+    let mut finished = false;
     loop {
         if !last_input_failed {
             println!("{}", game);
         }
         last_input_failed = false;
-        print!(" >\n");
+        print!("Now what?\n");
         input.clear();
         io::stdin().read_line(&mut input).unwrap();
         let mut tokens = input.split_whitespace();
         let first_token = tokens.next();
         let result = match first_token {
             None => Err("".into()),
-            Some("quit") => Ok(true),
+            Some("quit") => {
+                finished = true;
+                Ok(())
+            },
             Some("setup") => input_setup(tokens, &mut game),
             Some("free") => input_free(tokens, &mut game),
             Some("sac") => input_sacrifice(tokens, &mut game),
@@ -49,8 +53,12 @@ fn main() {
                 println!("{}", error_message);
                 last_input_failed = true;
             },
-            Ok(finished) => {
+            Ok(()) => {
                 if finished {
+                    break;
+                }
+                if let State::Finished(winner) = game.state {
+                    println!("Player {} wins", winner);
                     break;
                 }
             },
@@ -58,56 +66,62 @@ fn main() {
     }
 }
 
-fn input_free(mut tokens: SplitWhitespace, game: &mut Game) -> Result<bool, String> {
+fn input_free(mut tokens: SplitWhitespace, game: &mut Game) -> Result<(), String> {
     let color = parse_next_token_as(&mut tokens, parse_color, "color")?;
     let system = parse_next_token_as(&mut tokens, parse_system, "system ID")?;
     let result = game.free_move(system, color);
     if let Err(error) = result {
         return Err(format!("Failed to pick a free action: {:?}", error));
     }
-    Ok(false)
+    Ok(())
 }
 
-fn input_yellow(p0: SplitWhitespace, p1: &mut Game) -> Result<bool, String> {
+fn input_yellow(p0: SplitWhitespace, p1: &mut Game) -> Result<(), String> {
     unimplemented!()
 }
 
-fn input_blue(p0: SplitWhitespace, p1: &mut Game) -> Result<bool, String> {
+fn input_blue(p0: SplitWhitespace, p1: &mut Game) -> Result<(), String> {
     unimplemented!()
 }
 
-fn input_green(p0: SplitWhitespace, p1: &mut Game) -> Result<bool, String> {
+fn input_green(mut tokens: SplitWhitespace, game: &mut Game) -> Result<(), String> {
+    let ship = parse_next_token_as(&mut tokens, parse_piece, "ship")?;
+    let system = parse_next_token_as(&mut tokens, parse_system, "system ID")?;
+    let result = game.action(Action { ship, system, color_action: GreenAction });
+    if let Err(error) = result {
+        return Err(format!("Failed to perform a green action: {:?}", error));
+    }
+    Ok(())
+}
+
+fn input_red(p0: SplitWhitespace, p1: &mut Game) -> Result<(), String> {
     unimplemented!()
 }
 
-fn input_red(p0: SplitWhitespace, p1: &mut Game) -> Result<bool, String> {
+fn input_catastrophe(p0: SplitWhitespace, p1: &mut Game) -> Result<(), String> {
     unimplemented!()
 }
 
-fn input_catastrophe(p0: SplitWhitespace, p1: &mut Game) -> Result<bool, String> {
+fn input_sacrifice(p0: SplitWhitespace, p1: &mut Game) -> Result<(), String> {
     unimplemented!()
 }
 
-fn input_sacrifice(p0: SplitWhitespace, p1: &mut Game) -> Result<bool, String> {
-    unimplemented!()
-}
-
-fn input_setup(mut tokens: SplitWhitespace, game: &mut Game) -> Result<bool, String> {
+fn input_setup(mut tokens: SplitWhitespace, game: &mut Game) -> Result<(), String> {
     let star1 = parse_next_token_as(&mut tokens, parse_piece, "star 1")?;
     let star2 = parse_next_token_as(&mut tokens, parse_piece, "star 2")?;
     let ship = parse_next_token_as(&mut tokens, parse_piece, "starting ship")?;
     let result = game.setup(&SetupMove { ship, stars: [star1, star2] });
     match result {
         Err(error) => Err(format!("Setup attempt failed: {:?}", error)),
-        Ok(()) => Ok(false),
+        Ok(()) => Ok(()),
     }
 }
 
-fn input_end(game: &mut Game) -> Result<bool, String> {
+fn input_end(game: &mut Game) -> Result<(), String> {
     let result = game.end_turn();
     match result {
         Err(error) => Err(format!("Failed to end turn: {:?}", error)),
-        Ok(()) => Ok(false),
+        Ok(()) => Ok(()),
     }
 }
 

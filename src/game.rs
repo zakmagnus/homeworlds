@@ -5,7 +5,7 @@ use crate::system::*;
 use crate::inputs::*;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-enum State {
+pub enum State {
     Setup(PlayerIndex),
     Turn(PlayerIndex, TurnPhase),
     Finished(PlayerIndex), // The winner's index
@@ -13,7 +13,7 @@ enum State {
 
 #[derive(Debug)]
 pub struct Game {
-    state: State,
+    pub state: State,
     bank: Bank,
     systems: Vec<System>,
 }
