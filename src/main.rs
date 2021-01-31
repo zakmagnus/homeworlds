@@ -80,8 +80,15 @@ fn input_yellow(p0: SplitWhitespace, p1: &mut Game) -> Result<(), String> {
     unimplemented!()
 }
 
-fn input_blue(p0: SplitWhitespace, p1: &mut Game) -> Result<(), String> {
-    unimplemented!()
+fn input_blue(mut tokens: SplitWhitespace, game: &mut Game) -> Result<(), String> {
+    let ship = parse_next_token_as(&mut tokens, parse_piece, "ship")?;
+    let system = parse_next_token_as(&mut tokens, parse_system, "system ID")?;
+    let new_color = parse_next_token_as(&mut tokens, parse_color, "new color")?;
+    let result = game.action(Action { ship, system, color_action: BlueAction(new_color) });
+    if let Err(error) = result {
+        return Err(format!("Failed to perform a blue action: {:?}", error));
+    }
+    Ok(())
 }
 
 fn input_green(mut tokens: SplitWhitespace, game: &mut Game) -> Result<(), String> {
