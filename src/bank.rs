@@ -30,6 +30,30 @@ impl Bank {
         Ok(())
     }
 
+    pub fn remove_several(&mut self, pieces: &[Piece]) -> Result<(), InputError> {
+        let mut requested_counts = HashMap::new();
+        for piece in pieces.iter() {
+            let count = requested_counts.get_mut(piece);
+            match count {
+                None => {
+                    requested_counts.insert(*piece, 1);
+                },
+                Some(count) => {
+                    *count += 1;
+                },
+            }
+        }
+        for (piece, count) in requested_counts.iter() {
+            if self.num_available(*piece) < *count {
+                return Err(InputError::PieceUnavailable);
+            }
+        }
+        for (piece, count) in requested_counts.iter() {
+            *self.available_amounts.get_mut(piece).unwrap() -= count;
+        }
+        Ok(())
+    }
+
     pub fn add(&mut self, piece: Piece) -> Result<(), InputError> {
         if self.num_available(piece) >= 3 {
             return Err(InputError::BadPiece);

@@ -35,11 +35,7 @@ impl Game {
     }
 
     fn setup_unchecked(&mut self, player: PlayerIndex, setup_move: &SetupMove) -> Result<(), InputError> {
-        /* TODO Do all checks before doing any mutations. In practice, though, the bank's not gonna
-        run out of anything during setup... */
-        self.bank.remove(setup_move.stars[0])?;
-        self.bank.remove(setup_move.stars[1])?;
-        self.bank.remove(setup_move.ship)?;
+        self.bank.remove_several(&[setup_move.ship, setup_move.stars[0], setup_move.stars[1]])?;
 
         let mut homeworld = System::new_homeworld(setup_move.stars, player);
         homeworld.add_ship(player, setup_move.ship);
