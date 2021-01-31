@@ -35,6 +35,8 @@ impl Game {
     }
 
     fn setup_unchecked(&mut self, player: PlayerIndex, setup_move: &SetupMove) -> Result<(), InputError> {
+        /* TODO Do all checks before doing any mutations. In practice, though, the bank's not gonna
+        run out of anything during setup... */
         self.bank.remove(setup_move.stars[0])?;
         self.bank.remove(setup_move.stars[1])?;
         self.bank.remove(setup_move.ship)?;
@@ -212,11 +214,10 @@ impl Game {
 
     fn yellow_action(&mut self, player: PlayerIndex, system: SystemIndex, ship: Piece, yellow_action_input: &YellowActionInput)
         -> Result<(), InputError> {
-        // TODO this should not return an error after mutating data
         let target_system = self.get_yellow_target(system, yellow_action_input)?;
         target_system.add_ship(player, ship);
         let system_data = self.systems.get_mut(system as usize).unwrap();
-        system_data.remove_ship(player, ship)?;
+        system_data.remove_ship(player, ship);
         self.evaporate_system_if_necessary(system);
         Ok(())
     }
