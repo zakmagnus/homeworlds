@@ -59,17 +59,8 @@ fn main() {
 }
 
 fn input_free(mut tokens: SplitWhitespace, game: &mut Game) -> Result<bool, String> {
-    let color_input = tokens.next();
-    if let None = color_input {
-        return Err(format!("Malformed input, color not specified"));
-    }
-    let color_input = color_input.unwrap();
-    let color = parse_color(color_input)?;
-    let system_input = tokens.next();
-    if let None = system_input {
-        return Err(format!("Malformed input, system not specified"));
-    }
-    let system = parse_system(system_input.unwrap())?;
+    let color = parse_next_token_as(&mut tokens, parse_color, "color")?;
+    let system = parse_next_token_as(&mut tokens, parse_system, "system ID")?;
     let result = game.free_move(system, color);
     if let Err(error) = result {
         return Err(format!("Failed to pick a free action: {:?}", error));
@@ -102,9 +93,9 @@ fn input_sacrifice(p0: SplitWhitespace, p1: &mut Game) -> Result<bool, String> {
 }
 
 fn input_setup(mut tokens: SplitWhitespace, game: &mut Game) -> Result<bool, String> {
-    let star1 = parse_next_token_as_piece(&mut tokens, "star 1")?;
-    let star2 = parse_next_token_as_piece(&mut tokens, "star 2")?;
-    let ship = parse_next_token_as_piece(&mut tokens, "starting ship")?;
+    let star1 = parse_next_token_as(&mut tokens, parse_piece, "star 1")?;
+    let star2 = parse_next_token_as(&mut tokens, parse_piece, "star 2")?;
+    let ship = parse_next_token_as(&mut tokens, parse_piece, "starting ship")?;
     let result = game.setup(&SetupMove { ship, stars: [star1, star2] });
     match result {
         Err(error) => Err(format!("Setup attempt failed: {:?}", error)),
@@ -120,11 +111,11 @@ fn input_end(game: &mut Game) -> Result<bool, String> {
     }
 }
 
-fn parse_next_token_as_piece(tokens: &mut SplitWhitespace, description: &str) -> Result<Piece, String> {
+fn parse_next_token_as<T>(tokens: &mut SplitWhitespace, parse: fn(&str) -> Result<T, String>, description: &str) -> Result<T, String> {
     let piece_input = tokens.next();
     match piece_input {
         None => Err(format!("Malformed input, {} not specified", description)),
-        Some(piece_input) => parse_piece(piece_input),
+        Some(piece_input) => parse(piece_input),
     }
 }
 
