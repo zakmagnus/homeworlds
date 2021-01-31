@@ -189,9 +189,14 @@ impl Game {
         if ship.color == new_color {
             return Err(InputError::WrongColor);
         }
+        let new_ship = Piece { color: new_color, size: ship.size };
+        if self.bank.num_available(new_ship) <= 0 {
+            return Err(InputError::PieceUnavailable);
+        }
         let system = self.systems.get_mut(system as usize).unwrap();
         system.remove_ship(player, ship)?;
-        let new_ship = Piece { color: new_color, size: ship.size };
+        self.bank.add(ship);
+        self.bank.remove(new_ship);
         system.add_ship(player, new_ship);
         Ok(())
     }
@@ -249,10 +254,14 @@ impl Game {
                 }
             },
             YellowActionInput::Discover(new_star) => {
+                if self.bank.num_available(*new_star) <= 0 {
+                    return Err(InputError::PieceUnavailable);
+                }
                 let new_system = System::new(*new_star);
                 if !system.is_adjacent(&new_system) {
                     return Err(InputError::SystemsNotAdjacent);
                 }
+                self.bank.remove(*new_star);
                 self.systems.push(new_system);
                 Ok(self.systems.last_mut().unwrap())
             },
