@@ -17,16 +17,20 @@ fn main() {
     let mut game = Game::new();
 
     let mut input = String::new();
+    let mut last_input_failed = false;
     loop {
-        println!("{}", game);
+        if !last_input_failed {
+            println!("{}", game);
+        }
+        last_input_failed = false;
         print!(" >\n");
         input.clear();
         io::stdin().read_line(&mut input).unwrap();
         let mut tokens = input.split_whitespace();
         let first_token = tokens.next();
-        let finished = match first_token {
-            None => false,
-            Some("quit") => true,
+        let result = match first_token {
+            None => Err("".into()),
+            Some("quit") => Ok(true),
             Some("setup") => input_setup(tokens, &mut game),
             Some("free") => input_free(tokens, &mut game),
             Some("sac") => input_sacrifice(tokens, &mut game),
@@ -37,148 +41,127 @@ fn main() {
             Some("blue") => input_blue(tokens, &mut game),
             Some("yellow") => input_yellow(tokens, &mut game),
             Some(first_token) => {
-                println!("Unknown input: {}", first_token);
-                false
+                Err(format!("Unknown input: {}", first_token))
             },
         };
-        if finished {
-            break;
+        match result {
+            Err(error_message) => {
+                println!("{}", error_message);
+                last_input_failed = true;
+            },
+            Ok(finished) => {
+                if finished {
+                    break;
+                }
+            },
         }
     }
 }
 
-fn input_free(mut tokens: SplitWhitespace, game: &mut Game) -> bool {
+fn input_free(mut tokens: SplitWhitespace, game: &mut Game) -> Result<bool, String> {
     let color_input = tokens.next();
     if let None = color_input {
-        println!("Malformed input, color not specified");
-        return false;
+        return Err(format!("Malformed input, color not specified"));
     }
     let color_input = color_input.unwrap();
-    let color = parse_color(color_input);
-    if let None = color {
-        println!("Color not recognized: {}", color_input);
-        return false;
-    }
-    let color = color.unwrap();
+    let color = parse_color(color_input)?;
     let system_input = tokens.next();
     if let None = system_input {
-        println!("Malformed input, system not specified");
-        return false;
+        return Err(format!("Malformed input, system not specified"));
     }
-    let system_input = system_input.unwrap();
-    let parse_result = system_input.parse::<u8>();
-    if let Err(error) = parse_result {
-        println!("System ID {} is not a number: {:?}", system_input, error);
-        return false;
-    }
-    let system = parse_result.unwrap();
+    let system = parse_system(system_input.unwrap())?;
     let result = game.free_move(system, color);
     if let Err(error) = result {
-        println!("Failed to pick a free action: {:?}", error);
+        return Err(format!("Failed to pick a free action: {:?}", error));
     }
-    false
+    Ok(false)
 }
 
-fn input_yellow(p0: SplitWhitespace, p1: &mut Game) -> bool {
+fn input_yellow(p0: SplitWhitespace, p1: &mut Game) -> Result<bool, String> {
     unimplemented!()
 }
 
-fn input_blue(p0: SplitWhitespace, p1: &mut Game) -> bool {
+fn input_blue(p0: SplitWhitespace, p1: &mut Game) -> Result<bool, String> {
     unimplemented!()
 }
 
-fn input_green(p0: SplitWhitespace, p1: &mut Game) -> bool {
+fn input_green(p0: SplitWhitespace, p1: &mut Game) -> Result<bool, String> {
     unimplemented!()
 }
 
-fn input_red(p0: SplitWhitespace, p1: &mut Game) -> bool {
+fn input_red(p0: SplitWhitespace, p1: &mut Game) -> Result<bool, String> {
     unimplemented!()
 }
 
-fn input_catastrophe(p0: SplitWhitespace, p1: &mut Game) -> bool {
+fn input_catastrophe(p0: SplitWhitespace, p1: &mut Game) -> Result<bool, String> {
     unimplemented!()
 }
 
-fn input_sacrifice(p0: SplitWhitespace, p1: &mut Game) -> bool {
+fn input_sacrifice(p0: SplitWhitespace, p1: &mut Game) -> Result<bool, String> {
     unimplemented!()
 }
 
-fn input_setup(mut tokens: SplitWhitespace, game: &mut Game) -> bool {
-    let star1 = parse_next_token_as_piece(&mut tokens, "star 1");
-    if let None = star1 {
-        return false;
-    }
-    let star1 = star1.unwrap();
-    let star2 = parse_next_token_as_piece(&mut tokens, "star 2");
-    if let None = star2 {
-        return false;
-    }
-    let star2 = star2.unwrap();
-    let ship = parse_next_token_as_piece(&mut tokens, "starting ship");
-    if let None = ship {
-        return false;
-    }
-    let ship = ship.unwrap();
+fn input_setup(mut tokens: SplitWhitespace, game: &mut Game) -> Result<bool, String> {
+    let star1 = parse_next_token_as_piece(&mut tokens, "star 1")?;
+    let star2 = parse_next_token_as_piece(&mut tokens, "star 2")?;
+    let ship = parse_next_token_as_piece(&mut tokens, "starting ship")?;
     let result = game.setup(&SetupMove { ship, stars: [star1, star2] });
-    if let Err(error) = result {
-        println!("Setup attempt failed: {:?}", error);
-        return false;
+    match result {
+        Err(error) => Err(format!("Setup attempt failed: {:?}", error)),
+        Ok(()) => Ok(false),
     }
-    false
 }
 
-fn input_end(game: &mut Game) -> bool {
-    game.end_turn();
-    false
+fn input_end(game: &mut Game) -> Result<bool, String> {
+    let result = game.end_turn();
+    match result {
+        Err(error) => Err(format!("Failed to end turn: {:?}", error)),
+        Ok(()) => Ok(false),
+    }
 }
 
-fn parse_next_token_as_piece(tokens: &mut SplitWhitespace, description: &str) -> Option<Piece> {
+fn parse_next_token_as_piece(tokens: &mut SplitWhitespace, description: &str) -> Result<Piece, String> {
     let piece_input = tokens.next();
-    if let None = piece_input {
-        println!("Malformed input, {} not specified", description);
-        return None;
+    match piece_input {
+        None => Err(format!("Malformed input, {} not specified", description)),
+        Some(piece_input) => parse_piece(piece_input),
     }
-    let piece_input = piece_input.unwrap();
-    let piece = parse_piece(piece_input);
-    if let None = piece {
-        println!("{} is not a recognized piece: {}", description, piece_input);
-        return None;
-    }
-    piece
 }
 
-fn parse_piece(string: &str) -> Option<Piece> {
+fn parse_piece(string: &str) -> Result<Piece, String> {
     if string.len() != 2 {
-        return None;
+        return Err(format!("Unrecognized as a piece: {}", string));
     }
     let size_char = string.get(0..1).unwrap();
     let color_char = string.get(1..2).unwrap();
-    let size = parse_size(size_char);
-    let color = parse_color(color_char);
-    if let None = size {
-        return None;
-    }
-    if let None = color {
-        return None;
-    }
-    Some(Piece { size: size.unwrap(), color: color.unwrap() })
+    let size = parse_size(size_char)?;
+    let color = parse_color(color_char)?;
+    Ok(Piece { size, color })
 }
 
-fn parse_size(string: &str) -> Option<Size> {
+fn parse_size(string: &str) -> Result<Size, String> {
      match string {
-        "s" => Some(SMALL),
-        "m" => Some(MEDIUM),
-        "l" => Some(LARGE),
-        _ => None,
+        "s" => Ok(SMALL),
+        "m" => Ok(MEDIUM),
+        "l" => Ok(LARGE),
+        _ => Err(format!("Not recognized as a size: {}", string)),
     }
 }
 
-fn parse_color(string: &str) -> Option<Color> {
+fn parse_color(string: &str) -> Result<Color, String> {
     match string {
-        "r" => Some(RED),
-        "g" => Some(GREEN),
-        "b" => Some(BLUE),
-        "y" => Some(YELLOW),
-        _ => None,
+        "r" => Ok(RED),
+        "g" => Ok(GREEN),
+        "b" => Ok(BLUE),
+        "y" => Ok(YELLOW),
+        _ => Err(format!("Not recognized as a color: {}", string)),
+    }
+}
+
+fn parse_system(string: &str) -> Result<SystemIndex, String> {
+    let parse_result = string.parse::<u8>();
+    match parse_result {
+        Err(error) => Err(format!("System ID {} is not a number: {:?}", string, error)),
+        Ok(system) => Ok(system),
     }
 }
