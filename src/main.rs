@@ -40,10 +40,10 @@ fn main() {
             Some("sac") => input_sacrifice(tokens, &mut game),
             Some("catastrophe") => input_catastrophe(tokens, &mut game),
             Some("end") => input_end(&mut game),
-            Some("red") => input_red(tokens, &mut game),
-            Some("green") => input_green(tokens, &mut game),
-            Some("blue") => input_blue(tokens, &mut game),
-            Some("yellow") => input_yellow(tokens, &mut game),
+            Some("red") => input_action(tokens, &mut game, parse_red_action, RED),
+            Some("green") => input_action(tokens, &mut game, parse_green_action, GREEN),
+            Some("blue") => input_action(tokens, &mut game, parse_blue_action, BLUE),
+            Some("yellow") => input_action(tokens, &mut game, parse_yellow_action, YELLOW),
             Some(first_token) => {
                 Err(format!("Unknown input: {}", first_token))
             },
@@ -76,32 +76,32 @@ fn input_free(mut tokens: SplitWhitespace, game: &mut Game) -> Result<(), String
     Ok(())
 }
 
-fn input_yellow(p0: SplitWhitespace, p1: &mut Game) -> Result<(), String> {
+fn input_action(mut tokens: SplitWhitespace, game: &mut Game,
+                action_parser: fn(SplitWhitespace) -> Result<ColorAction, String>, color: Color) -> Result<(), String> {
+    let ship = parse_next_token_as(&mut tokens, parse_piece, "ship")?;
+    let system = parse_next_token_as(&mut tokens, parse_system, "system ID")?;
+    let color_action = action_parser(tokens)?;
+    let result = game.action(Action { ship, system, color_action });
+    if let Err(error) = result {
+        return Err(format!("Failed to perform a {} action: {:?}", color, error));
+    }
+    Ok(())
+}
+
+fn parse_green_action(mut tokens: SplitWhitespace) -> Result<ColorAction, String> {
+    Ok(GreenAction)
+}
+
+fn parse_blue_action(mut tokens: SplitWhitespace) -> Result<ColorAction, String> {
+    let new_color = parse_next_token_as(&mut tokens, parse_color, "new color")?;
+    Ok(BlueAction(new_color))
+}
+
+fn parse_red_action(mut tokens: SplitWhitespace) -> Result<ColorAction, String> {
     unimplemented!()
 }
 
-fn input_blue(mut tokens: SplitWhitespace, game: &mut Game) -> Result<(), String> {
-    let ship = parse_next_token_as(&mut tokens, parse_piece, "ship")?;
-    let system = parse_next_token_as(&mut tokens, parse_system, "system ID")?;
-    let new_color = parse_next_token_as(&mut tokens, parse_color, "new color")?;
-    let result = game.action(Action { ship, system, color_action: BlueAction(new_color) });
-    if let Err(error) = result {
-        return Err(format!("Failed to perform a blue action: {:?}", error));
-    }
-    Ok(())
-}
-
-fn input_green(mut tokens: SplitWhitespace, game: &mut Game) -> Result<(), String> {
-    let ship = parse_next_token_as(&mut tokens, parse_piece, "ship")?;
-    let system = parse_next_token_as(&mut tokens, parse_system, "system ID")?;
-    let result = game.action(Action { ship, system, color_action: GreenAction });
-    if let Err(error) = result {
-        return Err(format!("Failed to perform a green action: {:?}", error));
-    }
-    Ok(())
-}
-
-fn input_red(p0: SplitWhitespace, p1: &mut Game) -> Result<(), String> {
+fn parse_yellow_action(mut tokens: SplitWhitespace) -> Result<ColorAction, String> {
     unimplemented!()
 }
 
