@@ -2,7 +2,6 @@ use crate::common::*;
 
 #[derive(Debug)]
 pub struct SetupMove {
-    pub player: PlayerIndex,
     pub stars: [Piece; 2],
     pub ship: Piece,
 }

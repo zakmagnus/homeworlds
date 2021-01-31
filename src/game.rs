@@ -29,22 +29,21 @@ impl Game {
 
     pub fn setup(&mut self, setup_move: &SetupMove) -> Result<(), InputError> {
         match self.state {
-            State::Setup(player) if player == setup_move.player => self.setup_unchecked(setup_move),
-            State::Setup(_) => Err(InputError::WrongPlayer),
+            State::Setup(player) => self.setup_unchecked(player, setup_move),
             _ => Err(InputError::WrongState),
         }
     }
 
-    fn setup_unchecked(&mut self, setup_move: &SetupMove) -> Result<(), InputError> {
+    fn setup_unchecked(&mut self, player: PlayerIndex, setup_move: &SetupMove) -> Result<(), InputError> {
         self.bank.remove(setup_move.stars[0])?;
         self.bank.remove(setup_move.stars[1])?;
         self.bank.remove(setup_move.ship)?;
 
-        let mut homeworld = System::new_homeworld(setup_move.stars, setup_move.player);
-        homeworld.add_ship(setup_move.player, setup_move.ship);
+        let mut homeworld = System::new_homeworld(setup_move.stars, player);
+        homeworld.add_ship(player, setup_move.ship);
         self.systems.push(homeworld);
 
-        let next_player = setup_move.player + 1;
+        let next_player = player + 1;
         if next_player < NUM_PLAYERS {
             self.state = State::Setup(next_player);
         } else {
