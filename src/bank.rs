@@ -65,16 +65,20 @@ impl Bank {
 
 impl fmt::Display for Bank {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "Bank - ")?;
-        for color in ALL_COLORS.iter() {
-            write!(f, "{}: ", color)?;
-            for (index, size) in ALL_SIZES.iter().enumerate() {
-                write!(f, "{} {}", self.num_available(Piece {color: *color, size: *size}), size)?;
-                if index < ALL_SIZES.len() - 1 {
-                    write!(f, ", ")?;
+        write!(f, "Bank: ")?;
+        for (color_index, color) in ALL_COLORS.iter().enumerate() {
+            write!(f, "{} ", color)?;
+            for (size_index, size) in ALL_SIZES.iter().enumerate() {
+                let size_string = size.to_string();
+                let size_string = size_string.get(0..1).unwrap();
+                write!(f, "{}{}", self.num_available(Piece {color: *color, size: *size}), size_string)?;
+                if size_index < ALL_SIZES.len() - 1 {
+                    write!(f, " ")?;
                 }
             }
-            write!(f, "; ")?;
+            if (color_index < ALL_COLORS.len() - 1) {
+                write!(f, " | ")?;
+            }
         }
         write!(f, "")
     }

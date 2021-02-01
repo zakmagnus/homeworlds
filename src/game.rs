@@ -365,9 +365,9 @@ impl fmt::Display for State {
 
 impl fmt::Display for Game {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "Bank: {}\n{}\nSystems:\n", self.bank, self.state)?;
-        for system in self.systems.iter() {
-            write!(f, " - {}\n", system)?;
+        write!(f, "{}\n{}\nSystems:\n", self.bank, self.state)?;
+        for (index, system) in self.systems.iter().enumerate() {
+            write!(f, "{}: {}\n", index, system)?;
         }
         Ok(())
     }
