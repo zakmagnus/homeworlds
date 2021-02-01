@@ -46,7 +46,7 @@ impl System {
     }
 
     pub fn is_empty(&self) -> bool {
-        self.ships.is_empty()
+        self.ships.iter().all(|(_, player_ships)| player_ships.is_empty())
     }
 
     pub fn add_ship(&mut self, player: PlayerIndex, ship: Piece) {

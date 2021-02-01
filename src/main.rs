@@ -12,6 +12,7 @@ use crate::inputs::ColorAction::{GreenAction, YellowAction, BlueAction, RedActio
 use crate::common::Color::*;
 use crate::common::Size::*;
 use std::str::SplitWhitespace;
+use crate::inputs::YellowActionInput::{Discover, Existing};
 
 fn main() {
     let mut game = Game::new();
@@ -58,7 +59,7 @@ fn main() {
                     break;
                 }
                 if let State::Finished(winner) = game.state {
-                    println!("Player {} wins", winner);
+                    println!("Player {} wins. Final board:\n{}", winner, game);
                     break;
                 }
             },
@@ -68,7 +69,7 @@ fn main() {
 
 fn input_free(mut tokens: SplitWhitespace, game: &mut Game) -> Result<(), String> {
     let color = parse_next_token_as(&mut tokens, parse_color, "color")?;
-    let system = parse_next_token_as(&mut tokens, parse_system, "system ID")?;
+    let system = parse_next_token_as(&mut tokens, parse_u8, "system ID")?;
     let result = game.free_move(system, color);
     if let Err(error) = result {
         return Err(format!("Failed to pick a free action: {:?}", error));
@@ -79,7 +80,7 @@ fn input_free(mut tokens: SplitWhitespace, game: &mut Game) -> Result<(), String
 fn input_action(mut tokens: SplitWhitespace, game: &mut Game,
                 action_parser: fn(SplitWhitespace) -> Result<ColorAction, String>, color: Color) -> Result<(), String> {
     let ship = parse_next_token_as(&mut tokens, parse_piece, "ship")?;
-    let system = parse_next_token_as(&mut tokens, parse_system, "system ID")?;
+    let system = parse_next_token_as(&mut tokens, parse_u8, "system ID")?;
     let color_action = action_parser(tokens)?;
     let result = game.action(Action { ship, system, color_action });
     if let Err(error) = result {
@@ -98,19 +99,45 @@ fn parse_blue_action(mut tokens: SplitWhitespace) -> Result<ColorAction, String>
 }
 
 fn parse_red_action(mut tokens: SplitWhitespace) -> Result<ColorAction, String> {
-    unimplemented!()
+    let enemy_ship = parse_next_token_as(&mut tokens, parse_piece, "enemy ship")?;
+    let enemy_player = parse_next_token_as(&mut tokens, parse_u8, "enemy player ID")?;
+    Ok(RedAction(RedActionInput { enemy_player, ship_to_take: enemy_ship }))
 }
 
 fn parse_yellow_action(mut tokens: SplitWhitespace) -> Result<ColorAction, String> {
-    unimplemented!()
+    let first_token = tokens.next();
+    match first_token {
+        None => Err("No yellow action input".into()),
+        Some("new") => {
+            let new_star = parse_next_token_as(&mut tokens, parse_piece, "new star")?;
+            Ok(YellowAction(Discover(new_star)))
+        },
+        Some("old") => {
+            let system = parse_next_token_as(&mut tokens, parse_u8, "system ID")?;
+            Ok(YellowAction(Existing(system)))
+        },
+        Some(input) => Err(format!("Unknown yellow action {}", input))
+    }
 }
 
-fn input_catastrophe(p0: SplitWhitespace, p1: &mut Game) -> Result<(), String> {
-    unimplemented!()
+fn input_catastrophe(mut tokens: SplitWhitespace, game: &mut Game) -> Result<(), String> {
+    let system = parse_next_token_as(&mut tokens, parse_u8, "system ID")?;
+    let color = parse_next_token_as(&mut tokens, parse_color, "color")?;
+    let result = game.catastrophe(system, color);
+    if let Err(error) = result {
+        return Err(format!("Catastrophe failed: {:?}", error));
+    }
+    Ok(())
 }
 
-fn input_sacrifice(p0: SplitWhitespace, p1: &mut Game) -> Result<(), String> {
-    unimplemented!()
+fn input_sacrifice(mut tokens: SplitWhitespace, game: &mut Game) -> Result<(), String> {
+    let system = parse_next_token_as(&mut tokens, parse_u8, "system ID")?;
+    let ship = parse_next_token_as(&mut tokens, parse_piece, "ship")?;
+    let result = game.sacrifice(system, ship);
+    if let Err(error) = result {
+        return Err(format!("Failed to sacrifice: {:?}", error));
+    }
+    Ok(())
 }
 
 fn input_setup(mut tokens: SplitWhitespace, game: &mut Game) -> Result<(), String> {
@@ -170,10 +197,10 @@ fn parse_color(string: &str) -> Result<Color, String> {
     }
 }
 
-fn parse_system(string: &str) -> Result<SystemIndex, String> {
+fn parse_u8(string: &str) -> Result<u8, String> {
     let parse_result = string.parse::<u8>();
     match parse_result {
-        Err(error) => Err(format!("System ID {} is not a number: {:?}", string, error)),
+        Err(error) => Err(format!("{} is not a number: {:?}", string, error)),
         Ok(system) => Ok(system),
     }
 }

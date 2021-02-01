@@ -337,7 +337,7 @@ impl Game {
             .map(|home_system| home_system.get_ships(home_system.home_player.unwrap()).is_empty())
             .next();
         match system_loss_status {
-            None => false, // No home system, no ships at home system. Lose.
+            None => true, // No home system, no ships at home system. Lose.
             Some(is_loser) => is_loser,
         }
     }
